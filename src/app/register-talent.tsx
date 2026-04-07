@@ -11,13 +11,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Constant from 'expo-constants';
 import { useRouter } from 'expo-router';
-
 // Componentes Personalizados
 import ImagePickerForm from '../components/ImagePickerForm';
 import ButtomForm from '../components/buttom/ButtomForm';
 import CategoryItem from '../components/CategoryBar/CategoryItens';
 import HeaderForm from '../components/Header/HeaderForm';
 import InputForm from '../components/input/Form';
+import Selected from '../components/input/Selected';
 
 // Configurações e Libs
 import { CATEGORIAS } from '../constants/categories';
@@ -50,7 +50,7 @@ export default function RegisterTalent() {
             .from('profiles')
             .select('full_name')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
           if (error) throw error;
           if (data?.full_name) setUserName(data.full_name);
@@ -183,77 +183,31 @@ export default function RegisterTalent() {
     [category]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white"
-      style={{ paddingTop: statusBarHeight }}
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-white" style={{ paddingTop: statusBarHeight }}>
       {showOptions ? (
         <View className="flex-1 px-8 mb-6">
           <Text className="text-2xl font-bold text-slate-800 mt-10 mb-6">Escolha a Categoria</Text>
-          <FlatList
-            data={CATEGORIAS}
-            showsVerticalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <CategoryItem
-                categoria={item}
-                onPress={() => {
-                  setCategory(item.name);
-                  setShowOptions(false);
-                }}
-              />
+          <FlatList data={CATEGORIAS} showsVerticalScrollIndicator={false} keyExtractor={(item) => item.id} renderItem={({ item }) => (
+              <CategoryItem categoria={item} onPress={() => { setCategory(item.name); setShowOptions(false); }}/>
             )}
           />
           <ButtomForm label="Voltar" onPress={() => setShowOptions(false)} />
         </View>
       ) : (
-        <FlatList
-          data={[]}
-          renderItem={null}
-          keyboardShouldPersistTaps="always"
-          ListHeaderComponent={
+        <FlatList data={[]} renderItem={null} keyboardShouldPersistTaps="always" ListHeaderComponent={
             <View className="px-8">
               <View className="mt-10 mb-8">
-                <HeaderForm
-                  title="Seu Talento"
-                  subtitle={`Olá, ${userName || 'vizinho'}! Vamos configurar seu anúncio.`}
-                />
-              </View>
-
-              {/* GRUPO DE INPUTS: PADRONIZADO COM mb-6 */}
-              <View className="mb-6">
-                <InputForm
-                  label="Título do Serviço"
-                  placeholder="Ex: Marmitas Fitness"
-                  value={serviceTitle}
-                  onChangeText={setServiceTitle}
-                />
+                <HeaderForm title="Seu Talento" subtitle={`Olá, ${userName || 'vizinho'}! Vamos configurar seu anúncio.`}/>
               </View>
 
               <View className="mb-6">
-                <Text className="text-slate-600 mb-2 ml-1 font-medium">Categoria</Text>
-                <TouchableOpacity
-                  onPress={() => setShowOptions(true)}
-                  style={{ borderLeftWidth: 6, borderLeftColor: selectedCategoryColor }}
-                  className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex-row justify-between items-center"
-                >
-                  <Text className={category ? "text-slate-800 font-bold" : "text-slate-400"}>
-                    {category ? category : "Selecione..."}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color="#FF5A5F" />
-                </TouchableOpacity>
-              </View>
+                <InputForm label="Título do Serviço" placeholder="Ex: Marmitas Fitness" value={serviceTitle} onChangeText={setServiceTitle}/>
+              
 
-              <View className="mb-6">
-                <InputForm
-                  label="Seu CEP"
-                  placeholder="Ex: 86700000"
-                  value={cep}
-                  onChangeText={handleCepChange}
-                  keyboardType="numeric"
-                  maxLength={8}
-                />
+              <Selected category={category} setShowOptions={setShowOptions} color={selectedCategoryColor}/>
+
+              
+                <InputForm label="Seu CEP" placeholder="Ex: 86700000" value={cep} onChangeText={handleCepChange} keyboardType="numeric" maxLength={8}/>
                 
                 {neighborhood ? (
                   <View className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex-row items-center mt-3">
@@ -263,12 +217,7 @@ export default function RegisterTalent() {
                 ) : (
                   cep.length === 8 && (
                     <View className="mt-3">
-                      <InputForm
-                        label="Bairro"
-                        placeholder="Digite o bairro manualmente"
-                        value={neighborhood}
-                        onChangeText={setNeighborhood}
-                      />
+                      <InputForm label="Bairro" placeholder="Digite o bairro manualmente" value={neighborhood} onChangeText={setNeighborhood}/>
                     </View>
                   )
                 )}
@@ -278,41 +227,18 @@ export default function RegisterTalent() {
           ListFooterComponent={
             <View className="px-8 pb-10">
               <View className="mb-6">
-                <InputForm
-                  label="Descrição"
-                  placeholder="Detalhes sobre seu serviço..."
-                  value={bio}
-                  onChangeText={setBio}
-                  multiline
-                  numberOfLines={4}
-                />
+                <InputForm label="Descrição" placeholder="Detalhes sobre seu serviço..." value={bio} onChangeText={setBio} multiline numberOfLines={4}/>
               </View>
 
               <View className="mb-6">
-                <InputForm
-                  label="WhatsApp para Contato"
-                  placeholder="(00) 00000-0000"
-                  value={phone}
-                  onChangeText={(text: string) => setPhone(formatWhatsApp(text))}
-                  keyboardType="phone-pad"
-                  maxLength={15}
-                />
+                <InputForm label="WhatsApp para Contato" placeholder="(00) 00000-0000" value={phone} onChangeText={(text: string) => setPhone(formatWhatsApp(text))} keyboardType="phone-pad" maxLength={15}/>
               </View>
 
               <View className="mb-10">
-                <ImagePickerForm
-                  label="Fotos do Trabalho"
-                  images={images}
-                  onChangeImages={setImages}
-                  limit={5}
-                />
+                <ImagePickerForm label="Fotos do Trabalho" images={images} onChangeImages={setImages} limit={5}/>
               </View>
 
-              <ButtomForm 
-                label={loading ? "Publicando..." : "Publicar Talento"} 
-                onPress={handleRegister} 
-                disabled={loading} 
-              />
+              <ButtomForm label={loading ? "Publicando..." : "Publicar Talento"} onPress={handleRegister} disabled={loading} />
             </View>
           }
         />

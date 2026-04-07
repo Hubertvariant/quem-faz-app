@@ -8,7 +8,6 @@ import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 import Constant from 'expo-constants';
 
-// Corrigido: statusBarHeight (com 'B' maiúsculo)
 const statusBarHeight = Constant.statusBarHeight + 8;
 
 export default function Auth() {
@@ -42,29 +41,32 @@ export default function Auth() {
 
     if (isLogin) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      
+
       if (error) {
         Alert.alert("Erro no Login", error.message);
       } else if (data.session) {
-        router.replace('/home'); 
+        router.replace('/home');
       }
     } else {
-      // Cadastro com metadados (fullName)
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
+      const { data, error } = await supabase.auth.signUp({
+        email,
         password,
-        options: {
-          data: {
-            full_name: fullName, // Isso vai para auth.users.raw_user_meta_data
-          }
-        }
+        options: { data: { full_name: fullName } }
       });
 
       if (error) {
         Alert.alert("Erro no Cadastro", error.message);
-      } else {
-        Alert.alert('Sucesso!', 'Conta criada! Verifique seu e-mail para confirmar vizinho.');
-        setIsLogin(true); // Manda para o login após cadastrar
+      } else if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            { id: data.user.id, full_name: fullName, email: email }
+          ]);
+
+        if (profileError) console.error("Erro ao criar perfil:", profileError);
+
+        Alert.alert('Sucesso!', 'Verifique seu e-mail para confirmar vizinho.');
+        setIsLogin(true);
       }
     }
 
@@ -72,10 +74,10 @@ export default function Auth() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-white px-8 justify-center"
-      style={{paddingTop: statusBarHeight}}
+      style={{ paddingTop: statusBarHeight }}
     >
       <View>
         <HeaderForm
@@ -114,9 +116,9 @@ export default function Auth() {
               autocapitalize="none"
               secureTextEntry
             />
-            
+
             {isLogin && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleForgotPassword}
                 className="mt-2 items-end"
               >
