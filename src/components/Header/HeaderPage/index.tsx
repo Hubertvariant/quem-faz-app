@@ -7,14 +7,15 @@ interface HeaderProps {
     text: string;
     buttom?: boolean;
     icon: "arrow-back" | "menu";
+    onPress?: () => void;
 }
 
-export default function HeaderPage({ title, text, buttom, icon }: HeaderProps) {
+export default function HeaderPage({ title, text, onPress, buttom, icon }: HeaderProps) {
  return (
    <View className='w-full p-6 mt-4'>
         <View className="flex-row justify-end items-center mb-4">
            {buttom && (
-             <TouchableOpacity className='p-3 bg-white border border-slate-100 rounded-full shadow-sm items-center justify-center'>
+             <TouchableOpacity className='p-3 bg-white border border-slate-100 rounded-full shadow-sm items-center justify-center' onPress={onPress}>
                 <Ionicons name={icon} size={24} color="#FF5A5F" />
              </TouchableOpacity>
            )}

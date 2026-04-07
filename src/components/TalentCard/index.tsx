@@ -1,22 +1,26 @@
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router'; // 1. Importar o hook de navegação
 
 interface TalentCardProps {
   talent: any;
-  onPress?: () => void;
+  // Removi o onPress opcional para tornar a navegação interna e automática
 }
 
-export default function TalentCard({ talent, onPress }: TalentCardProps) {
+export default function TalentCard({ talent }: TalentCardProps) {
+  const router = useRouter(); // 2. Inicializar o router
 
   const mainPhoto = talent.photos && talent.photos.length > 0 ? talent.photos[0] : null;
-
   const profile = Array.isArray(talent.profiles) ? talent.profiles[0] : talent.profiles;
 
-  console.log("DEBUG CARD:", { title: talent.title, hasProfile: !!profile, photo: mainPhoto });
+  // 3. Função de navegação interna
+  const handlePress = () => {
+    router.push(`./details/${talent.id}`);
+  };
 
   return (
     <TouchableOpacity 
-      onPress={onPress}
+      onPress={handlePress} // 4. Chamar a rota ao clicar
       activeOpacity={0.9}
       className="bg-white mx-4 mb-4 p-4 rounded-[24px] shadow-sm border border-slate-100 flex-row"
     >
@@ -35,7 +39,6 @@ export default function TalentCard({ talent, onPress }: TalentCardProps) {
 
       <View className="flex-1 ml-4 justify-center">
         <View className="flex-row justify-between items-start">
-          {/* Título do Serviço (ex: Marmitas da Vovó) */}
           <Text 
             className="text-slate-800 text-lg font-bold flex-1 mr-2" 
             numberOfLines={1}
@@ -43,7 +46,6 @@ export default function TalentCard({ talent, onPress }: TalentCardProps) {
             {talent.title}
           </Text>
           
-          {/* Nota (Média de avaliações do Perfil) */}
           <View className="flex-row items-center bg-amber-50 px-2 py-1 rounded-lg">
             <Ionicons name="star" size={14} color="#FDCB6E" />
             <Text className="text-amber-600 font-bold ml-1 text-xs">
@@ -52,12 +54,10 @@ export default function TalentCard({ talent, onPress }: TalentCardProps) {
           </View>
         </View>
 
-        {/* Categoria e Nome de quem faz */}
         <Text className="text-slate-500 text-sm mb-1" numberOfLines={1}>
           {talent.category} • por {profile?.full_name || 'Vizinho'}
         </Text>
         
-        {/* Localização (Bairro vindo do Perfil) */}
         <View className="flex-row items-center">
           <Ionicons name="location-sharp" size={14} color="#FF5A5F" />
           <Text className="text-slate-400 text-xs ml-1">

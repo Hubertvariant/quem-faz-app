@@ -1,14 +1,25 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  Alert, 
+  FlatList, 
+  KeyboardAvoidingView, 
+  Platform, 
+  Text, 
+  TouchableOpacity, 
+  View 
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Constant from 'expo-constants';
 import { useRouter } from 'expo-router';
-import React, { useState, useMemo } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View, Image, ScrollView } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
 
+// Componentes Personalizados
+import ImagePickerForm from '../components/ImagePickerForm';
 import ButtomForm from '../components/buttom/ButtomForm';
 import CategoryItem from '../components/CategoryBar/CategoryItens';
 import HeaderForm from '../components/Header/HeaderForm';
 import InputForm from '../components/input/Form';
+
+// Configurações e Libs
 import { CATEGORIAS } from '../constants/categories';
 import { supabase } from '../lib/supabase';
 
@@ -18,69 +29,92 @@ export default function RegisterTalent() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
-  const [name, setName] = useState('');
+
+  // --- ESTADOS DOS DADOS ---
+  const [userName, setUserName] = useState('');
+  const [serviceTitle, setServiceTitle] = useState('');
   const [bio, setBio] = useState('');
   const [category, setCategory] = useState('');
   const [phone, setPhone] = useState('');
-  const [neighborhood, setNeighborhood] = useState('');
+  const [cep, setCep] = useState('');
+  const [neighborhood, setNeighborhood] = useState(''); 
   const [showOptions, setShowOptions] = useState(false);
 
-  // --- 1. FUNÇÃO DE UPLOAD (CORRIGIDA) ---
+  // 1. Busca nome do perfil (Cadastro Inicial)
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single();
+
+          if (error) throw error;
+          if (data?.full_name) setUserName(data.full_name);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar perfil:", error);
+      }
+    }
+    loadUserProfile();
+  }, []);
+
+  // 2. Busca de CEP e preenchimento de Bairro
+  const handleCepChange = async (value: string) => {
+    const cleanCep = value.replace(/\D/g, "");
+    setCep(cleanCep);
+
+    if (cleanCep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const data = await response.json();
+
+        if (data.erro) {
+          Alert.alert("Atenção", "CEP não encontrado.");
+          setNeighborhood('');
+          return;
+        }
+
+        setNeighborhood(data.bairro || data.localidade || '');
+      } catch (error) {
+        console.error("Erro viaCEP:", error);
+      }
+    } else {
+      setNeighborhood(''); 
+    }
+  };
+
+  // 3. Upload de Imagens para o Storage
   const uploadImages = async (userId: string) => {
     const uploadedUrls: string[] = [];
-
     for (const uri of images) {
       try {
         const response = await fetch(uri);
-        const blob = await response.blob();
-        
+        const arrayBuffer = await response.arrayBuffer();
         const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
-        const fileName = `${userId}/${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const filePath = `talents/${fileName}`;
+        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        const filePath = `${userId}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('images')
-          .upload(filePath, blob, {
+          .upload(filePath, arrayBuffer, {
             contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
-            upsert: true
+            upsert: true,
           });
 
         if (uploadError) throw uploadError;
 
         const { data } = supabase.storage.from('images').getPublicUrl(filePath);
-        if (data?.publicUrl) {
-          uploadedUrls.push(data.publicUrl);
-        }
+        if (data?.publicUrl) uploadedUrls.push(data.publicUrl);
       } catch (err) {
-        console.error("Erro no upload de imagem:", err);
+        console.error("Erro no upload:", err);
+        throw new Error("Falha ao enviar fotos.");
       }
     }
     return uploadedUrls;
-  };
-
-  // --- 2. LÓGICA DE SELEÇÃO DE IMAGENS ---
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert("Permissão necessária", "Precisamos de acesso às suas fotos.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'], // Atualizado para evitar Warning
-      allowsMultipleSelection: true,
-      selectionLimit: 5,
-      quality: 0.7,
-    });
-
-    if (!result.canceled) {
-      const selectedUris = result.assets.map(asset => asset.uri);
-      setImages(prev => [...prev, ...selectedUris].slice(0, 5));
-    }
-  };
-
-  const removeImage = (uri: string) => {
-    setImages(images.filter(img => img !== uri));
   };
 
   const formatWhatsApp = (value: string) => {
@@ -91,9 +125,9 @@ export default function RegisterTalent() {
     return `(${limited.slice(0, 2)}) ${limited.slice(2, 7)}-${limited.slice(7)}`;
   };
 
-  // --- 3. REGISTRO FINAL ---
+  // 4. Registro Final (Perfil + Serviço)
   async function handleRegister() {
-    if (!name || !bio || !category || !phone || !neighborhood) {
+    if (!serviceTitle || !bio || !category || !phone || !cep || !neighborhood) {
       Alert.alert("Atenção", "Preencha todos os campos corretamente!");
       return;
     }
@@ -104,40 +138,41 @@ export default function RegisterTalent() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // A) Upload das fotos primeiro
       let photoUrls: string[] = [];
       if (images.length > 0) {
         photoUrls = await uploadImages(user.id);
       }
 
-      // B) Atualiza Perfil (Tabela: profiles)
+      // Atualiza Perfil com Localização
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: user.id,
-        full_name: name,
+        full_name: userName,
         phone: phone.replace(/\D/g, ""),
-        neighborhood: neighborhood,
+        neighborhood,
+        cep,
         is_talent: true,
         updated_at: new Date(),
       });
 
       if (profileError) throw profileError;
 
-      // C) Cria o Serviço (Tabela: services)
+      // Cria o Serviço/Anúncio
       const { error: serviceError } = await supabase.from('services').insert({
         talent_id: user.id,
-        title: name,
+        title: serviceTitle,
         description: bio,
-        category: category,
-        photos: photoUrls, // Enviando o array de URLs públicas
+        category,
+        photos: photoUrls,
       });
 
       if (serviceError) throw serviceError;
 
-      Alert.alert("Sucesso!", "Seu talento foi publicado com sucesso! ✨");
+      Alert.alert("Sucesso!", "Seu talento foi publicado! ✨");
       router.replace('/');
+
     } catch (error: any) {
       console.error(error);
-      Alert.alert("Erro", "Não foi possível publicar seu talento agora.");
+      Alert.alert("Erro", "Não foi possível completar o cadastro.");
     } finally {
       setLoading(false);
     }
@@ -180,68 +215,104 @@ export default function RegisterTalent() {
           ListHeaderComponent={
             <View className="px-8">
               <View className="mt-10 mb-8">
-                <HeaderForm title="Seu Talento" subtitle="Mostre o que você faz de melhor." />
+                <HeaderForm
+                  title="Seu Talento"
+                  subtitle={`Olá, ${userName || 'vizinho'}! Vamos configurar seu anúncio.`}
+                />
               </View>
-              <View className="space-y-4">
-                <InputForm label="Nome do Serviço" placeholder="Ex: Programador Freelance" value={name} onChangeText={setName} />
-                
+
+              {/* GRUPO DE INPUTS: PADRONIZADO COM mb-6 */}
+              <View className="mb-6">
+                <InputForm
+                  label="Título do Serviço"
+                  placeholder="Ex: Marmitas Fitness"
+                  value={serviceTitle}
+                  onChangeText={setServiceTitle}
+                />
+              </View>
+
+              <View className="mb-6">
                 <Text className="text-slate-600 mb-2 ml-1 font-medium">Categoria</Text>
                 <TouchableOpacity
                   onPress={() => setShowOptions(true)}
                   style={{ borderLeftWidth: 6, borderLeftColor: selectedCategoryColor }}
-                  className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex-row justify-between items-center mb-4"
+                  className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex-row justify-between items-center"
                 >
                   <Text className={category ? "text-slate-800 font-bold" : "text-slate-400"}>
                     {category ? category : "Selecione..."}
                   </Text>
                   <Ionicons name="chevron-down" size={20} color="#FF5A5F" />
                 </TouchableOpacity>
+              </View>
 
-                <InputForm label="Bairro" placeholder="Onde você atende?" value={neighborhood} onChangeText={setNeighborhood} />
+              <View className="mb-6">
+                <InputForm
+                  label="Seu CEP"
+                  placeholder="Ex: 86700000"
+                  value={cep}
+                  onChangeText={handleCepChange}
+                  keyboardType="numeric"
+                  maxLength={8}
+                />
+                
+                {neighborhood ? (
+                  <View className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex-row items-center mt-3">
+                    <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+                    <Text className="text-emerald-700 ml-2 font-medium">Localizado em: {neighborhood}</Text>
+                  </View>
+                ) : (
+                  cep.length === 8 && (
+                    <View className="mt-3">
+                      <InputForm
+                        label="Bairro"
+                        placeholder="Digite o bairro manualmente"
+                        value={neighborhood}
+                        onChangeText={setNeighborhood}
+                      />
+                    </View>
+                  )
+                )}
               </View>
             </View>
           }
           ListFooterComponent={
             <View className="px-8 pb-10">
-              <View className="space-y-4">
-                <InputForm label="Descrição" placeholder="Conte um pouco sobre seu trabalho..." value={bio} onChangeText={setBio} multiline numberOfLines={4} />
+              <View className="mb-6">
                 <InputForm
-                  label="WhatsApp"
+                  label="Descrição"
+                  placeholder="Detalhes sobre seu serviço..."
+                  value={bio}
+                  onChangeText={setBio}
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+
+              <View className="mb-6">
+                <InputForm
+                  label="WhatsApp para Contato"
                   placeholder="(00) 00000-0000"
                   value={phone}
                   onChangeText={(text: string) => setPhone(formatWhatsApp(text))}
                   keyboardType="phone-pad"
                   maxLength={15}
                 />
-                
-                <View className="mt-4">
-                  <Text className="text-slate-600 mb-2 ml-1 font-medium">Fotos ({images.length}/5)</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
-                    {images.length < 5 && (
-                      <TouchableOpacity
-                        onPress={pickImage}
-                        className="w-24 h-24 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 items-center justify-center mr-3 mt-2"
-                      >
-                        <Ionicons name="camera" size={28} color="#94a3b8" />
-                      </TouchableOpacity>
-                    )}
-                    {images.map((uri) => (
-                      <View key={uri} className="relative mr-3 mt-2">
-                        <Image source={{ uri }} className="w-24 h-24 rounded-2xl" />
-                        <TouchableOpacity
-                          onPress={() => removeImage(uri)}
-                          className="absolute -top-1 -right-1 bg-rose-500 rounded-full w-6 h-6 items-center justify-center border-2 border-white"
-                        >
-                          <Ionicons name="close" size={14} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </ScrollView>
-                </View>
               </View>
-              <View className="mt-8">
-                <ButtomForm label={loading ? "Publicando..." : "Publicar"} onPress={handleRegister} disabled={loading} />
+
+              <View className="mb-10">
+                <ImagePickerForm
+                  label="Fotos do Trabalho"
+                  images={images}
+                  onChangeImages={setImages}
+                  limit={5}
+                />
               </View>
+
+              <ButtomForm 
+                label={loading ? "Publicando..." : "Publicar Talento"} 
+                onPress={handleRegister} 
+                disabled={loading} 
+              />
             </View>
           }
         />

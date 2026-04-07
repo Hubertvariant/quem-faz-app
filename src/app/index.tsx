@@ -16,7 +16,7 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState(''); // Novo estado para o nome
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleForgotPassword() {

@@ -1,5 +1,4 @@
 import { FlatList, Text, View, ActivityIndicator, RefreshControl } from 'react-native';
-import { Link } from 'expo-router';
 import CategoryBar from '../components/CategoryBar';
 import HeaderPage from '../components/Header/HeaderPage';
 import SearchBar from '../components/input/SearchBar';
@@ -9,6 +8,8 @@ import AdCard from '../components/TalentCard/AdCard';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import Constant from 'expo-constants';
+import { useRouter } from 'expo-router';
+
 
 const statusBarHeight = Constant.statusBarHeight + 8;
 
@@ -16,6 +17,8 @@ export default function Home() {
   const [talents, setTalents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
+
 
   // --- BUSCA OS DADOS NO SUPABASE ---
   async function fetchTalents() {
@@ -89,6 +92,7 @@ export default function Home() {
                 title="O que você precisa hoje?"
                 icon="menu"
                 buttom={true}
+                onPress={() => router.push('/register-talent')}
               />
               <SearchBar />
               <CategoryBar />
@@ -101,7 +105,6 @@ export default function Home() {
           ListEmptyComponent={() => (
             <View className="items-center mt-10">
               <Text className="text-slate-400">Nenhum talento encontrado por aqui... 🏡</Text>
-              <Link href="/register-talent" className="text-rose-400 underline">Gostaria de ser o primeiro?</Link>
             </View>
           )}
           ListFooterComponent={() => <View className="h-10" />}

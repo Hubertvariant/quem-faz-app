@@ -16,6 +16,10 @@ export default function RootLayout() {
     name="register-talent" options={{ 
       headerShown: false,
      }} />
+     <Stack.Screen
+    name="details/[id]" options={{ 
+      headerShown: false,
+     }} />
      
   </Stack>
 }
