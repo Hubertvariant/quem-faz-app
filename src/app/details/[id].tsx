@@ -67,33 +67,43 @@ export default function TalentDetails() {
     );
   }
 
+  console.log("Dados do Perfil:", talent.profiles);
   return (
     <View className="flex-1 bg-white">
       <ScrollView showsVerticalScrollIndicator={false}>
-        <HeaderPage title="Detalhes" text={talent.category} icon="arrow-back" buttom onPress={() => router.back()}
+        <HeaderPage 
+          title="Detalhes" 
+          text={talent.category} 
+          icon="arrow-back" 
+          buttom 
+          onPress={() => router.back()} 
         />
 
         <PhotoCarousel photos={talent.photos} />
 
         <View className="p-6 -mt-6 bg-white rounded-t-[32px]">
-
           <HeaderService talent={talent} shareService={shareService} />
 
-          <Locate local={talent.profiles?.neighborhood} />
+          {talent.profiles?.neighborhood && (
+            <Locate local={talent.profiles.neighborhood} />
+          )}
 
           <View className="mb-8">
             <Text className="text-lg font-bold text-slate-800 mb-2">Sobre o serviço</Text>
             <Text className="text-slate-600 leading-6 text-base">
-              {talent.description}
+              {talent.description || "Sem descrição disponível."}
             </Text>
           </View>
 
-          <ProfessionalCard fullName={talent.profiles?.full_name} avatar={talent.profiles?.avatar_url}
-          />
+          {talent.profiles && (
+            <ProfessionalCard 
+              fullName={talent.profiles.full_name} 
+              avatar={talent.profiles.avatar_url} 
+            />
+          )}
 
           <View className="mb-10">
-            <ButtomForm label="Conversar agora" onPress={handleWhatsApp}
-            />
+            <ButtomForm label="Conversar agora" onPress={handleWhatsApp} />
             <Text className="text-center text-slate-400 text-xs mt-4">
               Ao chamar, diga que viu no Mural do Bairro!
             </Text>
