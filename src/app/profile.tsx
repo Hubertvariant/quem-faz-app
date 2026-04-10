@@ -9,7 +9,8 @@ import TalentList from '../components/TalentCard/TalentList';
 import ImagePickerForm from '../components/ImagePickerForm';
 import EditingInput from '../components/input/EditingInput';
 
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
@@ -95,53 +96,103 @@ export default function Profile() {
         );
     };
 
-    const handleDeleteAccount = () => {
-        Alert.alert(
-            "Tem certeza?",
-            "Esta ação excluirá todos os seus dados permanentemente.",
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Excluir", style: "destructive", onPress: () => {
-                        supabase.auth.signOut();
+const handleDeleteAccount = () => {
+    Alert.alert(
+        "Tem certeza?",
+        "Esta ação excluirá sua conta e todos os seus dados permanentemente.",
+        [
+            { text: "Cancelar", style: "cancel" },
+            {
+                text: "Excluir", style: "destructive", onPress: async () => {
+                    try {
+                        setLoading(true);
+
+                        const { error } = await supabase.rpc('delete_user');
+
+                        if (error) throw error;
+
+                        await supabase.auth.signOut();
+                        
                         router.replace('/');
+
+                    } catch (error: any) {
+                        console.error(error);
+                        Alert.alert("Erro", "Não foi possível excluir a conta: " + error.message);
+                    } finally {
+                        setLoading(false);
                     }
                 }
-            ]
-        );
-    };
-
-    async function SaveProfile() {
-        try {
-            setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            let avatarUrl = perfil.avatar_url;
-
-            if (editImage.lenght > 0 && editImage[0].startsWith('file://')) {
-                const imageUri = editImage[0];
-                const fileExt = imageUri.split('.').pop();
-                const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-                const filePath = `avatars/${fileName}`;
-
-                const base64 = await FileSystem.readAsStringAsync(imageUri, { enconding: 'base64' });
-
-                const { error: uploadError } = await supabase.storage
-                    .from('avatars')
-                    .upload(filePath, decode(base64), { contentType: `image/${fileExt}` });
-
-                if (uploadError) throw uploadError;
-
-                const { data: publicUrlData } = supabase.storage
-                    .from('avatars')
-                    .getPublicUrl(filePath);
-
-                avatarUrl = publicUrlData.publicUrl;
             }
-        }
-    }
+        ]
+    );
+};
 
+async function SaveProfile() {
+    try {
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        let avatarUrl = perfil.avatar_url;
+
+        if (editImage && editImage.length > 0 && editImage[0].startsWith('file://')) {
+            const imageUri = editImage[0];
+            const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
+            const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
+
+            const response = await fetch(imageUri);
+            const blob = await response.blob();
+            const arrayBuffer = await new Response(blob).arrayBuffer();
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatar')
+                .upload(filePath, arrayBuffer, { 
+                    contentType: `image/${fileExt}`,
+                    upsert: true 
+                });
+
+            if (uploadError) throw uploadError;
+
+            const { data: publicUrlData } = supabase.storage
+                .from('avatar')
+                .getPublicUrl(filePath);
+
+            avatarUrl = publicUrlData.publicUrl;
+        }
+
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+                full_name: editNome,
+                bio: editBio,
+                neighborhood: editNeighborhood,
+                cep: editCep,
+                avatar_url: avatarUrl,
+            })
+            .eq('id', user.id);
+
+        if (updateError) throw updateError;
+
+        setPerfil({
+            ...perfil,
+            full_name: editNome,
+            bio: editBio,
+            neighborhood: editNeighborhood,
+            cep: editCep,
+            avatar_url: avatarUrl
+        });
+
+        setIsEditing(false);
+        Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
+
+    } catch (error: any) {
+        console.error("Erro detalhado:", error);
+        Alert.alert('Erro ao salvar', error.message || 'Ocorreu um erro inesperado.');
+    } finally {
+        setLoading(false);
+    }
+}
     if (loading) {
         return (
             <View className='flex-1 bg-slate-50 items-center justify-center'>
