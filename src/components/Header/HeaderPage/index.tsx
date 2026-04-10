@@ -1,10 +1,11 @@
 import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MotiText } from 'moti';
+import { router } from 'expo-router';
 
 interface HeaderProps {
-    title: string;
-    text: string;
+    title?: string;
+    text?: string;
     buttom?: boolean;
     icon: "arrow-back" | "menu";
     onPress?: () => void;

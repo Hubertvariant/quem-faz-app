@@ -7,13 +7,12 @@ import AdCard from '../components/TalentCard/AdCard';
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import Constant from 'expo-constants';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
-const statusBarHeight = Constant.statusBarHeight + 8;
 
 export default function Home() {
+  const insets = useSafeAreaInsets();
   const [talents, setTalents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,7 +70,7 @@ export default function Home() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff', paddingTop: statusBarHeight }}>
+    <View style={{ flex: 1, backgroundColor: '#fff', paddingTop: insets.top + 8}}>
       {loading && !refreshing ? (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#FF5A5F" />
@@ -92,7 +91,7 @@ export default function Home() {
                 title="O que você precisa hoje?"
                 icon="menu"
                 buttom={true}
-                onPress={() => router.push('/register-talent')}
+                onPress={() => router.push('/profile')}
               />
               <SearchBar />
               <CategoryBar />

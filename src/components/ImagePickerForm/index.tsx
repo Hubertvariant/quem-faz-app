@@ -41,13 +41,18 @@ export default function ImagePickerForm({ label, images, onChangeImages, limit =
     onChangeImages(images.filter(img => img !== uri));
   };
 
+  const isSingleImage = limit === 1;
+
+  const ContentWrapper = isSingleImage ? View : ScrollView;
+  const styleCenter = isSingleImage ? ' flex-row items-center justify-center' : 'flex-row';
+
   return (
     <View className="mt-4">
-      <Text className="text-slate-600 mb-2 ml-1 font-medium">
+      <Text className="text-slate-600 mb-2 ml-1 font-medium text-center">
         {label} {limit > 1 && `(${images.length}/${limit})`}
       </Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+      <ContentWrapper horizontal showsHorizontalScrollIndicator={false} className={styleCenter}>
         {/* Botão de Adicionar: Só aparece se não atingiu o limite */}
         {images.length < limit && (
           <TouchableOpacity 
@@ -70,7 +75,7 @@ export default function ImagePickerForm({ label, images, onChangeImages, limit =
             </TouchableOpacity>
           </View>
         ))}
-      </ScrollView>
+      </ContentWrapper>
     </View>
   );
 }

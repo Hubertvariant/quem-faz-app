@@ -1,17 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Alert, 
-  FlatList, 
-  KeyboardAvoidingView, 
-  Platform, 
-  Text, 
-  TouchableOpacity, 
-  View 
-} from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Constant from 'expo-constants';
-import { useRouter } from 'expo-router';
-// Componentes Personalizados
 import ImagePickerForm from '../components/ImagePickerForm';
 import ButtomForm from '../components/buttom/ButtomForm';
 import CategoryItem from '../components/CategoryBar/CategoryItens';
@@ -19,18 +7,17 @@ import HeaderForm from '../components/Header/HeaderForm';
 import InputForm from '../components/input/Form';
 import Selected from '../components/input/Selected';
 
-// Configurações e Libs
+import React, { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { CATEGORIAS } from '../constants/categories';
 import { supabase } from '../lib/supabase';
-
-const statusBarHeight = Constant.statusBarHeight + 8;
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RegisterTalent() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
-
-  // --- ESTADOS DOS DADOS ---
   const [userName, setUserName] = useState('');
   const [serviceTitle, setServiceTitle] = useState('');
   const [bio, setBio] = useState('');
@@ -168,7 +155,7 @@ export default function RegisterTalent() {
       if (serviceError) throw serviceError;
 
       Alert.alert("Sucesso!", "Seu talento foi publicado! ✨");
-      router.replace('/');
+      router.replace('/home');
 
     } catch (error: any) {
       console.error(error);
@@ -183,7 +170,7 @@ export default function RegisterTalent() {
     [category]);
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-white" style={{ paddingTop: statusBarHeight }}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-white" style={{ paddingTop: insets.top + 8}}>
       {showOptions ? (
         <View className="flex-1 px-8 mb-6">
           <Text className="text-2xl font-bold text-slate-800 mt-10 mb-6">Escolha a Categoria</Text>

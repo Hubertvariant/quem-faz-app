@@ -20,6 +20,13 @@ export default function RootLayout() {
     name="details/[id]" options={{ 
       headerShown: false,
      }} />
-     
+     <Stack.Screen
+    name="profile" options={{ 
+      headerShown: false,
+     }} />
+     <Stack.Screen
+    name="editProfile" options={{ 
+      headerShown: false,
+     }} />
   </Stack>
 }

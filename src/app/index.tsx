@@ -6,11 +6,10 @@ import ButtomForm from '../components/buttom/ButtomForm';
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
-import Constant from 'expo-constants';
-
-const statusBarHeight = Constant.statusBarHeight + 8;
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Auth() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -77,7 +76,7 @@ export default function Auth() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-white px-8 justify-center"
-      style={{ paddingTop: statusBarHeight }}
+      style={{ paddingTop: insets.top + 8}}
     >
       <View>
         <HeaderForm
