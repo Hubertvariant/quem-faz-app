@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "quem-faz-app",
+    "name": "QuemFaz?",
     "slug": "quem-faz-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,6 +16,7 @@
       }
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -23,7 +24,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.hubertvariant.quemfazapp"
     },
     "web": {
       "output": "static",

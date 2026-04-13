@@ -27,10 +27,8 @@ export default function ImagePickerForm({ label, images, onChangeImages, limit =
       const selectedUris = result.assets.map(asset => asset.uri);
       
       if (limit === 1) {
-        // Se o limite for 1, substitui a foto atual
         onChangeImages([selectedUris[0]]);
       } else {
-        // Se for vários, adiciona à lista respeitando o limite
         const newImages = [...images, ...selectedUris].slice(0, limit);
         onChangeImages(newImages);
       }
@@ -42,22 +40,22 @@ export default function ImagePickerForm({ label, images, onChangeImages, limit =
   };
 
   const isSingleImage = limit === 1;
-
   const ContentWrapper = isSingleImage ? View : ScrollView;
   const styleCenter = isSingleImage ? ' flex-row items-center justify-center' : 'flex-row';
 
   return (
     <View className="mt-4">
-      <Text className="text-slate-600 mb-2 ml-1 font-medium text-center">
+      {/* Label: dark:text-slate-400 */}
+      <Text className="text-slate-600 dark:text-slate-400 mb-2 ml-1 font-medium text-center">
         {label} {limit > 1 && `(${images.length}/${limit})`}
       </Text>
 
       <ContentWrapper horizontal showsHorizontalScrollIndicator={false} className={styleCenter}>
-        {/* Botão de Adicionar: Só aparece se não atingiu o limite */}
+        {/* Botão de Adicionar: AJUSTADO dark:bg-slate-900 e dark:border-slate-700 */}
         {images.length < limit && (
           <TouchableOpacity 
             onPress={pickImage} 
-            className="w-24 h-24 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 items-center justify-center mr-3 mt-2"
+            className="w-24 h-24 bg-slate-50 dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 items-center justify-center mr-3 mt-2 shadow-sm"
           >
             <Ionicons name="camera" size={28} color="#94a3b8" />
           </TouchableOpacity>
@@ -66,12 +64,14 @@ export default function ImagePickerForm({ label, images, onChangeImages, limit =
         {/* Lista de Imagens Selecionadas */}
         {images.map((uri) => (
           <View key={uri} className="relative mr-3 mt-2">
-            <Image source={{ uri }} className="w-24 h-24 rounded-2xl" />
+            <Image source={{ uri }} className="w-24 h-24 rounded-2xl border border-slate-100 dark:border-slate-800" />
+            
+            {/* Botão Remover: dark:border-slate-900 para destacar no fundo escuro */}
             <TouchableOpacity 
               onPress={() => removeImage(uri)} 
-              className="absolute -top-1 -right-1 bg-rose-500 rounded-full w-6 h-6 items-center justify-center border-2 border-white"
+              className="absolute -top-1 -right-1 bg-rose-500 rounded-full w-7 h-7 items-center justify-center border-2 border-white dark:border-slate-900 shadow-md"
             >
-              <Ionicons name="close" size={14} color="#fff" />
+              <Ionicons name="close" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
         ))}

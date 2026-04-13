@@ -1,4 +1,15 @@
-import { View, Text, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  KeyboardAvoidingView, 
+  Platform, 
+  Alert, 
+  ScrollView, 
+  TouchableWithoutFeedback, 
+  Keyboard,
+  Dimensions
+} from 'react-native';
 import HeaderForm from '../components/Header/HeaderForm';
 import InputForm from '../components/input/Form';
 import ButtomForm from '../components/buttom/ButtomForm';
@@ -40,7 +51,6 @@ export default function Auth() {
 
     if (isLogin) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
       if (error) {
         Alert.alert("Erro no Login", error.message);
       } else if (data.session) {
@@ -72,81 +82,104 @@ export default function Auth() {
     setLoading(false);
   }
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white px-8 justify-center"
-      style={{ paddingTop: insets.top + 8}}
-    >
-      <View>
-        <HeaderForm
-          title={isLogin ? 'Bem-vindo!' : 'Criar Conta'}
-          subtitle={isLogin ? 'Sentimos sua falta, vizinho.' : 'Junte-se à nossa comunidade.'}
-        />
-
-        <View className="space-y-4">
-          {/* Campo de Nome: Só aparece se NÃO for login */}
-          {!isLogin && (
-            <View className="mb-4">
-              <InputForm
-                label="Nome Completo"
-                placeholder="Como quer ser chamado?"
-                value={fullName}
-                onChangeText={setFullName}
+return (
+    <View className="flex-1 bg-white dark:bg-slate-950">
+      <KeyboardAvoidingView
+        // A SOLUÇÃO REAL: No iOS usamos padding, no Android deixamos o SO gerenciar via softwareKeyboardLayoutMode
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        // No iOS, se houver tab bar ou header, ajuste o offset. 0 geralmente funciona para telas cheias.
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        className="flex-1"
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView 
+            // Permite que o conteúdo role para cima do teclado
+            contentContainerStyle={{ 
+              flexGrow: 1, 
+              paddingTop: insets.top + 20,
+              paddingBottom: insets.bottom + 40,
+              paddingHorizontal: 32,
+              justifyContent: 'center' 
+            }}
+            // Fecha o teclado ao arrastar
+            keyboardDismissMode="on-drag"
+            // Mantém o clique nos botões mesmo com teclado aberto
+            keyboardShouldPersistTaps="always"
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="w-full">
+              <HeaderForm
+                title={isLogin ? 'Bem-vindo!' : 'Criar Conta'}
+                subtitle={isLogin ? 'Sentimos sua falta, vizinho.' : 'Junte-se à nossa comunidade.'}
               />
-            </View>
-          )}
 
-          <InputForm
-            label="E-mail"
-            placeholder="seu@email.com"
-            value={email}
-            onChangeText={setEmail}
-            autocapitalize="none"
-            keyboardType='email-address' // Melhorado para teclados de e-mail
-          />
+              <View className="space-y-4">
+                {!isLogin && (
+                  <View className="mb-4">
+                    <InputForm
+                      label="Nome Completo"
+                      placeholder="Como quer ser chamado?"
+                      value={fullName}
+                      onChangeText={setFullName}
+                    />
+                  </View>
+                )}
 
-          <View className="mt-4">
-            <InputForm
-              label="Senha"
-              placeholder="Sua senha secreta"
-              value={password}
-              onChangeText={setPassword}
-              autocapitalize="none"
-              secureTextEntry
-            />
+                <InputForm
+                  label="E-mail"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType='email-address'
+                />
 
-            {isLogin && (
+                <View className="mt-4">
+                  <InputForm
+                    label="Senha"
+                    placeholder="Sua senha secreta"
+                    value={password}
+                    onChangeText={setPassword}
+                    autoCapitalize="none"
+                    secureTextEntry
+                  />
+
+                  {isLogin && (
+                    <TouchableOpacity
+                      onPress={handleForgotPassword}
+                      className="mt-2 items-end"
+                    >
+                      <Text className="text-rose-500 dark:text-rose-400 text-xs font-medium">
+                        Esqueceu a senha?
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              <View className="mt-8">
+                <ButtomForm
+                  label={loading ? 'Processando...' : (isLogin ? 'Entrar' : 'Cadastrar')}
+                  onPress={handleAuth}
+                  disabled={loading}
+                />
+              </View>
+
               <TouchableOpacity
-                onPress={handleForgotPassword}
-                className="mt-2 items-end"
+                onPress={() => setIsLogin(!isLogin)}
+                className="mt-6 mb-4 items-center"
               >
-                <Text className="text-rose-500 text-xs font-medium">Esqueceu a senha?</Text>
+                <Text className="text-slate-500 dark:text-slate-400">
+                  {isLogin ? 'Não tem uma conta? ' : 'Já possui uma conta? '}
+                  <Text className="text-rose-500 dark:text-rose-400 font-bold">
+                    {isLogin ? 'Cadastre-se' : 'Faça Login'}
+                  </Text>
+                </Text>
               </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        <View className="mt-8">
-          <ButtomForm
-            label={loading ? 'Processando...' : (isLogin ? 'Entrar' : 'Cadastrar')}
-            onPress={handleAuth}
-            disabled={loading}
-          />
-        </View>
-
-        <TouchableOpacity
-          onPress={() => setIsLogin(!isLogin)}
-          className="mt-6 items-center"
-        >
-          <Text className="text-slate-500">
-            {isLogin ? 'Não tem uma conta? ' : 'Já possui uma conta? '}
-            <Text className="text-rose-500 font-bold">
-              {isLogin ? 'Cadastre-se' : 'Faça Login'}
-            </Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </View>
   );
 }

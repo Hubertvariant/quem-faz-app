@@ -1,5 +1,14 @@
-import { Alert, FlatList, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  Alert, FlatList, KeyboardAvoidingView, Platform,
+  Text, View, ActivityIndicator, TouchableOpacity
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
+import { StatusBar } from 'expo-status-bar';
+
 import ImagePickerForm from '../components/ImagePickerForm';
 import ButtomForm from '../components/buttom/ButtomForm';
 import CategoryItem from '../components/CategoryBar/CategoryItens';
@@ -7,102 +16,29 @@ import HeaderForm from '../components/Header/HeaderForm';
 import InputForm from '../components/input/Form';
 import Selected from '../components/input/Selected';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'expo-router';
 import { CATEGORIAS } from '../constants/categories';
 import { supabase } from '../lib/supabase';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RegisterTalent() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
+  const { talentId } = useLocalSearchParams();
+
+  const isEditing = !!talentId;
+
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [images, setImages] = useState<string[]>([]);
-  const [userName, setUserName] = useState('');
   const [serviceTitle, setServiceTitle] = useState('');
-  const [bio, setBio] = useState('');
+  const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [phone, setPhone] = useState('');
   const [cep, setCep] = useState('');
-  const [neighborhood, setNeighborhood] = useState(''); 
+  const [neighborhood, setNeighborhood] = useState('');
+  const [city, setCity] = useState(''); 
+  const [state, setState] = useState(''); 
   const [showOptions, setShowOptions] = useState(false);
-
-  // 1. Busca nome do perfil (Cadastro Inicial)
-  useEffect(() => {
-    async function loadUserProfile() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', user.id)
-            .maybeSingle();
-
-          if (error) throw error;
-          if (data?.full_name) setUserName(data.full_name);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar perfil:", error);
-      }
-    }
-    loadUserProfile();
-  }, []);
-
-  // 2. Busca de CEP e preenchimento de Bairro
-  const handleCepChange = async (value: string) => {
-    const cleanCep = value.replace(/\D/g, "");
-    setCep(cleanCep);
-
-    if (cleanCep.length === 8) {
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-        const data = await response.json();
-
-        if (data.erro) {
-          Alert.alert("Atenção", "CEP não encontrado.");
-          setNeighborhood('');
-          return;
-        }
-
-        setNeighborhood(data.bairro || data.localidade || '');
-      } catch (error) {
-        console.error("Erro viaCEP:", error);
-      }
-    } else {
-      setNeighborhood(''); 
-    }
-  };
-
-  // 3. Upload de Imagens para o Storage
-  const uploadImages = async (userId: string) => {
-    const uploadedUrls: string[] = [];
-    for (const uri of images) {
-      try {
-        const response = await fetch(uri);
-        const arrayBuffer = await response.arrayBuffer();
-        const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const filePath = `${userId}/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('images')
-          .upload(filePath, arrayBuffer, {
-            contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
-            upsert: true,
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
-        if (data?.publicUrl) uploadedUrls.push(data.publicUrl);
-      } catch (err) {
-        console.error("Erro no upload:", err);
-        throw new Error("Falha ao enviar fotos.");
-      }
-    }
-    return uploadedUrls;
-  };
 
   const formatWhatsApp = (value: string) => {
     const digits = value.replace(/\D/g, "");
@@ -112,10 +48,92 @@ export default function RegisterTalent() {
     return `(${limited.slice(0, 2)}) ${limited.slice(2, 7)}-${limited.slice(7)}`;
   };
 
-  // 4. Registro Final (Perfil + Serviço)
-  async function handleRegister() {
-    if (!serviceTitle || !bio || !category || !phone || !cep || !neighborhood) {
-      Alert.alert("Atenção", "Preencha todos os campos corretamente!");
+  useEffect(() => {
+    if (isEditing) {
+      async function loadTalentData() {
+        try {
+          setFetching(true);
+          const { data, error } = await supabase
+            .from('services')
+            .select('*, profiles(phone)')
+            .eq('id', String(talentId))
+            .single();
+
+          if (error) throw error;
+          if (data) {
+            setServiceTitle(data.title);
+            setDescription(data.description);
+            setImages(data.photos || []);
+            setCategory(data.category);
+            setCep(data.cep || '');
+            setNeighborhood(data.neighborhood || '');
+            setCity(data.city || '');
+            setState(data.state || '');
+            if (data.profiles?.phone) setPhone(formatWhatsApp(data.profiles.phone));
+          }
+        } catch (error: any) {
+          Alert.alert("Erro", "Não encontramos este anúncio.");
+          router.back();
+        } finally {
+          setFetching(false);
+        }
+      }
+      loadTalentData();
+    }
+  }, [talentId]);
+
+  const handleCepChange = async (value: string) => {
+    const cleanCep = value.replace(/\D/g, "");
+    setCep(cleanCep);
+    
+    if (cleanCep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          setNeighborhood(data.bairro || '');
+          setCity(data.localidade || '');
+          setState(data.uf || '');
+        } else {
+          Alert.alert("Erro", "CEP não encontrado.");
+        }
+      } catch (e) { 
+        console.log("Erro CEP:", e); 
+      }
+    }
+  };
+
+  const processImages = async (userId: string) => {
+    const finalUrls: string[] = [];
+    for (const uri of images) {
+      if (uri.startsWith('http')) {
+        finalUrls.push(uri);
+        continue;
+      }
+      try {
+        const response = await fetch(uri);
+        const arrayBuffer = await response.arrayBuffer();
+        const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${userId}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage.from('images').upload(filePath, arrayBuffer, {
+          contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
+          upsert: true,
+        });
+
+        if (uploadError) throw uploadError;
+        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+        if (data?.publicUrl) finalUrls.push(data.publicUrl);
+      } catch (err) { console.log("Erro imagem:", err); }
+    }
+    return finalUrls;
+  };
+
+  async function handleSave() {
+    if (!serviceTitle || !description || !category || !cep) {
+      Alert.alert("Atenção", "Preencha os campos obrigatórios.");
       return;
     }
 
@@ -123,111 +141,174 @@ export default function RegisterTalent() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!user) throw new Error("Usuário não logado.");
 
-      let photoUrls: string[] = [];
-      if (images.length > 0) {
-        photoUrls = await uploadImages(user.id);
-      }
+      const photoUrls = await processImages(user.id);
 
-      // Atualiza Perfil com Localização
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: user.id,
-        full_name: userName,
-        phone: phone.replace(/\D/g, ""),
-        neighborhood,
-        cep,
-        is_talent: true,
-        updated_at: new Date(),
-      });
+      await supabase.from('profiles').update({ phone: phone.replace(/\D/g, "") }).eq('id', user.id);
 
-      if (profileError) throw profileError;
-
-      // Cria o Serviço/Anúncio
-      const { error: serviceError } = await supabase.from('services').insert({
+      const serviceData = {
         talent_id: user.id,
         title: serviceTitle,
-        description: bio,
+        description,
         category,
+        cep,
+        neighborhood,
+        city,
+        state,
         photos: photoUrls,
-      });
+      };
 
-      if (serviceError) throw serviceError;
+      if (isEditing) {
+        const { error: updateError } = await supabase
+          .from('services')
+          .update(serviceData)
+          .eq('id', String(talentId).trim())
+          .eq('talent_id', user.id);
 
-      Alert.alert("Sucesso!", "Seu talento foi publicado! ✨");
+        if (updateError) throw updateError;
+        Alert.alert("Sucesso", "Anúncio atualizado! ✨");
+      } else {
+        const { error: insertError } = await supabase.from('services').insert([serviceData]);
+        if (insertError) throw insertError;
+        Alert.alert("Sucesso", "Anúncio publicado! ✨");
+      }
+
       router.replace('/home');
-
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert("Erro", "Não foi possível completar o cadastro.");
+    } catch (e: any) {
+      Alert.alert("Erro ao salvar", e.message || "Tente novamente.");
     } finally {
       setLoading(false);
     }
   }
 
-  const selectedCategoryColor = useMemo(() =>
-    CATEGORIAS.find(c => c.name === category)?.color || '#E2E8F0',
-    [category]);
+  async function handleDelete() {
+    Alert.alert("Excluir", "Deseja apagar este anúncio?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Excluir", style: "destructive", onPress: async () => {
+          setLoading(true);
+          const { error } = await supabase
+            .from('services')
+            .delete()
+            .eq('id', String(talentId).trim());
+
+          if (!error) {
+            Alert.alert("Pronto", "Anúncio removido.");
+            router.replace('/home');
+          } else {
+            Alert.alert("Erro", "Não foi possível excluir.");
+          }
+          setLoading(false);
+        }
+      }
+    ]);
+  }
+
+  const selectedColor = useMemo(() => CATEGORIAS.find(c => c.name === category)?.color || '#E2E8F0', [category]);
+
+  if (fetching) return (
+    <View className="flex-1 justify-center bg-white dark:bg-slate-950">
+        <ActivityIndicator size="large" color="#FF5A5F" />
+    </View>
+  );
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-white" style={{ paddingTop: insets.top + 8}}>
+    <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        className="flex-1 bg-white dark:bg-slate-950" 
+    >
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      
       {showOptions ? (
         <View className="flex-1 px-8 mb-6">
-          <Text className="text-2xl font-bold text-slate-800 mt-10 mb-6">Escolha a Categoria</Text>
-          <FlatList data={CATEGORIAS} showsVerticalScrollIndicator={false} keyExtractor={(item) => item.id} renderItem={({ item }) => (
-              <CategoryItem categoria={item} onPress={() => { setCategory(item.name); setShowOptions(false); }}/>
-            )}
+          <Text className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-10 mb-6">
+            Escolha a Categoria
+          </Text>
+          <FlatList 
+            data={CATEGORIAS} 
+            keyExtractor={(i) => i.id.toString()} 
+            renderItem={({ item }) => (
+              <CategoryItem categoria={item} onPress={() => { setCategory(item.name); setShowOptions(false); }} />
+            )} 
           />
-          <ButtomForm label="Voltar" onPress={() => setShowOptions(false)} />
+          <View className="py-4">
+            <ButtomForm label="Voltar" onPress={() => setShowOptions(false)} />
+          </View>
         </View>
       ) : (
-        <FlatList data={[]} renderItem={null} keyboardShouldPersistTaps="always" ListHeaderComponent={
+        <FlatList 
+          data={[]} 
+          renderItem={null} 
+          showsVerticalScrollIndicator={false}
+          // ESSENCIAL: Permite que cliques nos inputs e botões funcionem com teclado aberto
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ 
+            flexGrow: 1,
+            paddingTop: insets.top + 8,
+            paddingBottom: Platform.OS === 'ios' ? 120 : 60 // Espaço extra para o teclado não cobrir o rodapé
+          }}
+          ListHeaderComponent={
             <View className="px-8">
-              <View className="mt-10 mb-8">
-                <HeaderForm title="Seu Talento" subtitle={`Olá, ${userName || 'vizinho'}! Vamos configurar seu anúncio.`}/>
-              </View>
-
-              <View className="mb-6">
-                <InputForm label="Título do Serviço" placeholder="Ex: Marmitas Fitness" value={serviceTitle} onChangeText={setServiceTitle}/>
-              
-
-              <Selected category={category} setShowOptions={setShowOptions} color={selectedCategoryColor}/>
-
-              
-                <InputForm label="Seu CEP" placeholder="Ex: 86700000" value={cep} onChangeText={handleCepChange} keyboardType="numeric" maxLength={8}/>
+              <HeaderForm title={isEditing ? "Editar Serviço" : "Novo Serviço"} subtitle="Preencha os dados abaixo." />
+              <View className="mt-8 mb-6">
+                <InputForm label="Título" value={serviceTitle} onChangeText={setServiceTitle} />
+                <Selected category={category} setShowOptions={setShowOptions} color={selectedColor} />
+                <InputForm label="CEP" value={cep} onChangeText={handleCepChange} keyboardType="numeric" maxLength={8} />
                 
-                {neighborhood ? (
-                  <View className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex-row items-center mt-3">
-                    <Ionicons name="checkmark-circle" size={18} color="#10b981" />
-                    <Text className="text-emerald-700 ml-2 font-medium">Localizado em: {neighborhood}</Text>
+                {city ? (
+                  <View className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl mt-2 border border-slate-100 dark:border-slate-800">
+                    <Text className="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold mb-1">Localização Identificada</Text>
+                    <Text className="text-slate-800 dark:text-slate-200 font-medium">{neighborhood} - {city}, {state}</Text>
                   </View>
-                ) : (
-                  cep.length === 8 && (
-                    <View className="mt-3">
-                      <InputForm label="Bairro" placeholder="Digite o bairro manualmente" value={neighborhood} onChangeText={setNeighborhood}/>
-                    </View>
-                  )
-                )}
+                ) : null}
               </View>
             </View>
-          }
+          } 
           ListFooterComponent={
-            <View className="px-8 pb-10">
-              <View className="mb-6">
-                <InputForm label="Descrição" placeholder="Detalhes sobre seu serviço..." value={bio} onChangeText={setBio} multiline numberOfLines={4}/>
+            <View className="px-8">
+              <View className="mb-4">
+                <InputForm 
+                  label="Descrição" 
+                  value={description} 
+                  onChangeText={setDescription} 
+                  multiline 
+                  numberOfLines={4} 
+                  textAlignVertical="top"
+                />
               </View>
 
-              <View className="mb-6">
-                <InputForm label="WhatsApp para Contato" placeholder="(00) 00000-0000" value={phone} onChangeText={(text: string) => setPhone(formatWhatsApp(text))} keyboardType="phone-pad" maxLength={15}/>
+              <InputForm 
+                label="WhatsApp" 
+                value={phone} 
+                onChangeText={(t: any) => setPhone(formatWhatsApp(t))} 
+                keyboardType="phone-pad" 
+                maxLength={15} 
+              />
+              
+              <View className="mt-6">
+                <ImagePickerForm label="Fotos" images={images} onChangeImages={setImages} limit={5} />
               </View>
 
-              <View className="mb-10">
-                <ImagePickerForm label="Fotos do Trabalho" images={images} onChangeImages={setImages} limit={5}/>
+              <View className="mt-10">
+                <ButtomForm 
+                  label={loading ? "Salvando..." : (isEditing ? "Salvar Alterações" : "Publicar")} 
+                  onPress={handleSave} 
+                  disabled={loading} 
+                />
               </View>
 
-              <ButtomForm label={loading ? "Publicando..." : "Publicar Talento"} onPress={handleRegister} disabled={loading} />
+              {isEditing && (
+                <TouchableOpacity 
+                    className="mt-6 p-4 rounded-2xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 items-center flex-row justify-center" 
+                    onPress={handleDelete}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  <Text className="text-red-500 font-bold ml-2">Excluir Anúncio</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          }
+          } 
         />
       )}
     </KeyboardAvoidingView>

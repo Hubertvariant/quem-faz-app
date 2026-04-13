@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Image, Dimensions, Text } from 'react-native';
+import { View, ScrollView, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -33,19 +33,33 @@ export default function PhotoCarousel({ photos }: PhotoCarouselProps) {
             />
           ))
         ) : (
-          <View style={{ width, height: 350 }} className="bg-slate-200 items-center justify-center">
-            <Ionicons name="image-outline" size={60} color="#94a3b8" />
+          /* AJUSTADO: bg-slate-200 -> dark:bg-slate-800 */
+          <View 
+            style={{ width, height: 350 }} 
+            className="bg-slate-200 dark:bg-slate-800 items-center justify-center"
+          >
+            <Ionicons 
+              name="image-outline" 
+              size={64} 
+              color={activeImage === 0 ? "#94a3b8" : "#475569"} 
+            />
           </View>
         )}
       </ScrollView>
 
-      {/* Indicador de Bolinhas */}
+      {/* Indicador de Bolinhas (Paginação) */}
       {photos?.length > 1 && (
-        <View className="flex-row absolute bottom-4 w-full justify-center space-x-2">
+        <View className="flex-row absolute bottom-12 w-full justify-center space-x-2">
           {photos.map((_, i) => (
             <View 
               key={i} 
-              className={`h-2 w-2 rounded-full ${activeImage === i ? 'bg-white w-4' : 'bg-white/50'}`} 
+              /* O indicador branco com opacidade funciona bem em ambos os temas 
+                 pois as fotos costumam ser o fundo aqui */
+              className={`h-2 rounded-full ${
+                activeImage === i 
+                ? 'bg-white w-5' // Bolinha ativa um pouco mais larga para estilo moderno
+                : 'bg-white/40'
+              }`} 
             />
           ))}
         </View>

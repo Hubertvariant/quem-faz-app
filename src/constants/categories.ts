@@ -7,5 +7,13 @@ export const CATEGORIAS = [
     { id: '7', name: 'Jardinagem', icon: 'leaf', color: '#51CF66' },
     { id: '8', name: 'Aulas ', icon: 'book', color: '#228BE6' },
     { id: '9', name: 'Costura', icon: 'shirt-outline', color: '#FF6B6B' },
-    
+    { id: '10', name: 'Saúde', icon: 'medkit-outline', color: '#FF8787' },
+    { id: '11', name: 'Tecnologia', icon: 'desktop-outline', color: '#4DABF7' },
+    { id: '12', name: 'Transporte', icon: 'car-outline', color: '#FCC419' },
+    { id: '13', name: 'Eventos', icon: 'balloon-outline', color: '#F06595' },
+    { id: '14', name: 'Mudanças', icon: 'cube-outline', color: '#FF922B' },
+    { id: '15', name: 'Segurança', icon: 'shield-checkmark-outline', color: '#5C7CFA' },
+    { id: '16', name: 'Fretes', icon: 'bicycle-outline', color: '#82C91E' },
+    { id: '17', name: 'Bem-estar', icon: 'sunny-outline', color: '#20C997' },
+    { id: '18', name: 'Consultoria', icon: 'briefcase-outline', color: '#ADB5BD' },
 ]
